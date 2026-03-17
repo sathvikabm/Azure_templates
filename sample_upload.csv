@@ -1,0 +1,6 @@
+id,name,email,department,joined_date
+1,Alice Johnson,alice@example.com,Engineering,2023-01-15
+2,Bob Smith,bob@example.com,Marketing,2022-07-20
+3,Carol White,carol@example.com,Finance,2024-03-10
+4,David Brown,david@example.com,HR,2021-11-05
+5,Eva Green,eva@example.com,Engineering,2023-09-01
