@@ -1,0 +1,313 @@
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+
+// Replace with your actual Key Vault name
+string keyVaultUrl = "https://YOUR-KEYVAULT-NAME.vault.azure.net/";
+
+// Configure authentication for local/cloud shell usage
+DefaultAzureCredentialOptions options = new()
+{
+    ExcludeEnvironmentCredential = true,
+    ExcludeManagedIdentityCredential = true
+};
+
+// Create the Key Vault client
+var client = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential(options));
+
+// Main menu loop
+while (true)
+{
+    Console.Clear();
+    Console.WriteLine("AZURE KEY VAULT SECRET MANAGER");
+    Console.WriteLine("--------------------------------");
+    Console.WriteLine("1. Create a new secret");
+    Console.WriteLine("2. List all secrets");
+    Console.WriteLine("Type 'quit' to exit");
+    Console.WriteLine();
+    Console.Write("Enter your choice: ");
+
+    string? input = Console.ReadLine()?.Trim().ToLower();
+
+    if (input == "quit")
+    {
+        Console.WriteLine("Goodbye!");
+        break;
+    }
+
+    switch (input)
+    {
+        case "1":
+            await CreateSecretAsync(client);
+            break;
+
+        case "2":
+            await ListSecretsAsync(client);
+            break;
+
+        default:
+            Console.WriteLine("Invalid option. Please enter 1, 2, or 'quit'.");
+            Pause();
+            break;
+    }
+}
+
+static async Task CreateSecretAsync(SecretClient client)
+{
+    try
+    {
+        Console.Clear();
+        Console.WriteLine("CREATE A NEW SECRET");
+        Console.WriteLine("-------------------");
+
+        Console.Write("Enter secret name: ");
+        string? secretName = Console.ReadLine()?.Trim();
+
+        if (string.IsNullOrWhiteSpace(secretName))
+        {
+            Console.WriteLine("Secret name cannot be empty.");
+            Pause();
+            return;
+        }
+
+        Console.Write("Enter secret value: ");
+        string? secretValue = Console.ReadLine()?.Trim();
+
+        if (string.IsNullOrWhiteSpace(secretValue))
+        {
+            Console.WriteLine("Secret value cannot be empty.");
+            Pause();
+            return;
+        }
+
+        KeyVaultSecret secret = new(secretName, secretValue);
+        await client.SetSecretAsync(secret);
+
+        Console.WriteLine();
+        Console.WriteLine($"Secret '{secretName}' created successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"Error creating secret: {ex.Message}");
+    }
+
+    Pause();
+}
+
+static async Task ListSecretsAsync(SecretClient client)
+{
+    try
+    {
+        Console.Clear();
+        Console.WriteLine("LIST OF SECRETS");
+        Console.WriteLine("---------------");
+
+        var secretProperties = client.GetPropertiesOfSecretsAsync();
+        bool hasSecrets = false;
+
+        await foreach (var secretProperty in secretProperties)
+        {
+            hasSecrets = true;
+
+            try
+            {
+                KeyVaultSecret secret = await client.GetSecretAsync(secretProperty.Name);
+
+                Console.WriteLine($"Name    : {secret.Name}");
+                Console.WriteLine($"Value   : {secret.Value}");
+                Console.WriteLine($"Created : {secret.Properties.CreatedOn}");
+                Console.WriteLine(new string('-', 40));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving secret '{secretProperty.Name}': {ex.Message}");
+                Console.WriteLine(new string('-', 40));
+            }
+        }
+
+        if (!hasSecrets)
+        {
+            Console.WriteLine("No secrets found in the Key Vault.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error listing secrets: {ex.Message}");
+    }
+
+    Pause();
+}
+
+static void Pause()
+{
+    Console.WriteLine();
+    Console.WriteLine("Press Enter to continue...");
+    Console.ReadLine();
+}
+
+
+
+mkdir keyvault
+cd keyvault
+dotnet new console
+dotnet add package Azure.Identity
+dotnet add package Azure.Security.KeyVault.Secrets
+code Program.cs
+az login
+dotnet run
+
+
+
+STEP 1 — CREATE AZURE RESOURCES
+
+Set your variables:
+
+resourceGroup=myResourceGrouplod60458567
+location=eastus
+keyVaultName=mykeyvaultname60458567
+
+Create the Key Vault:
+
+az keyvault create --name $keyVaultName \
+    --resource-group $resourceGroup \
+    --location $location
+
+The lab also notes that in your Cloudslice setup, the resource group may already exist, so that step can be skipped if it’s already provisioned.
+
+STEP 2 — ASSIGN YOURSELF PERMISSIONS
+
+Get your signed-in user principal name:
+
+userPrincipal=$(az rest --method GET --url https://graph.microsoft.com/v1.0/me \
+    --headers 'Content-Type=application/json' \
+    --query userPrincipalName --output tsv)
+
+Get the Key Vault resource ID:
+
+resourceID=$(az keyvault show --resource-group $resourceGroup \
+    --name $keyVaultName --query id --output tsv)
+
+Assign the Key Vault Secrets Officer role:
+
+az role assignment create --assignee $userPrincipal \
+    --role "Key Vault Secrets Officer" \
+    --scope $resourceID
+
+This role is what allows your account to set, delete, and list secrets in the vault.
+
+STEP 3 — ADD A SECRET USING AZURE CLI
+
+Create a sample secret:
+
+az keyvault secret set --vault-name $keyVaultName \
+    --name "MySecret" \
+    --value "My secret value"
+
+Verify it:
+
+az keyvault secret show --name "MySecret" --vault-name $keyVaultName
+
+The lab explicitly uses this as a quick validation before moving to the .NET app.
+
+STEP 4 — CREATE THE .NET CONSOLE APP
+
+Create a new folder and console project:
+
+mkdir keyvault
+cd keyvault
+dotnet new console
+
+Install required packages:
+
+dotnet add package Azure.Identity
+dotnet add package Azure.Security.KeyVault.Secrets
+
+These are the exact libraries the lab uses for authentication and Key Vault secret access.
+
+STEP 5 — ADD THE APPLICATION CODE
+
+Open the file:
+
+code Program.cs
+
+Replace the contents with the full PROGRAM.CS shown above.
+
+Important:
+Update this line with your real vault name:
+
+string keyVaultUrl = "https://YOUR-KEYVAULT-NAME.vault.azure.net/";
+
+The starter template in your uploaded lab has placeholders for:
+
+creating the client
+menu system
+create secret
+list secrets
+
+and then fills them in piece by piece.
+
+STEP 6 — SIGN IN AND RUN THE APP
+
+Sign in:
+
+az login
+
+Then run:
+
+dotnet run
+
+The lab notes that even if Cloud Shell is already authenticated, az login is still required for the exercise flow. It also says that if you have multiple tenants, you may need --tenant.
+
+EXPECTED BEHAVIOR
+
+When the program starts, you should see a menu like this:
+
+1. Create a new secret
+2. List all secrets
+Type 'quit' to exit
+choose 2 to list existing secrets
+choose 1 to create a new one
+type quit to exit
+
+That matches the menu-driven flow in the uploaded instructions.
+
+HOW THE CODE WORKS
+AUTHENTICATION
+
+The app uses:
+
+DefaultAzureCredential
+
+with these exclusions:
+
+ExcludeEnvironmentCredential = true
+ExcludeManagedIdentityCredential = true
+
+That means it avoids environment-based credentials and managed identity for this exercise, and instead uses the available interactive/Azure CLI-based auth path the lab expects.
+
+SECRET CLIENT
+
+The app creates:
+
+var client = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential(options));
+
+This is the main SDK object used to talk to Azure Key Vault.
+
+CREATE SECRET
+
+The CreateSecretAsync method:
+
+prompts for secret name
+prompts for secret value
+creates a KeyVaultSecret
+stores it with SetSecretAsync
+LIST SECRETS
+
+The ListSecretsAsync method:
+
+gets all secret metadata using GetPropertiesOfSecretsAsync()
+loops through each secret
+fetches full values using GetSecretAsync(secretProperty.Name)
+prints name, value, and creation time
+
+That exact pattern is what the lab text uses.
