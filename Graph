@@ -1,3 +1,18 @@
+Your app needs to work with Microsoft cloud data that belongs to a user or an organization:
+
+read user profile
+read manager / org structure
+send or read emails
+read calendar events
+create Teams meetings
+access files in OneDrive or SharePoint
+manage users/groups in Entra ID
+automate tenant/admin tasks
+
+Those are all common Graph scenarios Microsoft explicitly documents, including mail, calendar events, files, and org/user data.
+
+
+
 using System;
 using System.Threading.Tasks;
 using Azure.Identity;
