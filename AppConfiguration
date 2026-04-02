@@ -1,6 +1,10 @@
 # you create an Azure App Configuration resource, store configuration settings using Azure CLI, and build a .NET console application that uses the ConfigurationBuilder to retrieve configuration values. 
 # You learn how to organize settings with hierarchical keys and authenticate your application to access cloud-based configuration data.
 
+#1.Create an Azure App Configuration resource
+#2.Store connection string configuration information
+#3.Create a .NET console app to retrieve the configuration information
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Azure.Identity;
